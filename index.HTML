@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Fuga Console TV</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; cursor: none; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        #tv-viewport { 
+            width: 90vw; height: 50.625vw; max-width: 177.78vh; max-height: 100vh;
+            border: 5px solid #222; position: relative; background: #2d5a27;
+        }
+        canvas { width: 100%; height: 100%; display: block; }
+        #ui-layer { position: absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); }
+        h1 { color: #2ecc71; font-size: 4vw; font-family: sans-serif; text-transform: uppercase; margin: 0; }
+        p { color: #ccc; font-size: 2vw; font-family: sans-serif; }
+        .hud { position: absolute; top: 30px; left: 40px; font-size: 3vw; color: yellow; font-family: sans-serif; font-weight: bold; text-shadow: 2px 2px #000; }
+    </style>
+</head>
+<body>
+    <div id="tv-viewport">
+        <canvas id="cvs"></canvas>
+        <div class="hud" id="hud" style="display:none">Tempo: <span id="t">0</span></div>
+        <div id="ui-layer">
+            <h1>PRESSIONE 'A'</h1>
+            <p>Para Iniciar</p>
+            <p style="font-size:1vw; color:#555">Drift Fix Ativado ✅</p>
+        </div>
+    </div>
+    <script>
+        const cvs=document.getElementById('cvs'), ctx=cvs.getContext('2d');
+        // Ajusta canvas interno para HD
+        cvs.width = 1280; cvs.height = 720;
+
+        let player={x:600, y:300, s:40}, enemy={x:50, y:50, s:40, spd:3};
+        let active=false, score=0;
+
+        function startGame(){
+            document.getElementById('ui-layer').style.display='none';
+            document.getElementById('hud').style.display='block';
+            active=true; loop();
+        }
+
+        function loop(){
+            if(!active) { checkStart(); requestAnimationFrame(loop); return; }
+
+            const pads = navigator.getGamepads();
+            const pad = pads[0];
+
+            if(pad) {
+                // --- AQUI ESTÁ A CORREÇÃO DO SEU VÍDEO ---
+                // Zona Morta de 0.2: Se mover pouco, ele ignora.
+                let ax = pad.axes[0]; let ay = pad.axes[1];
+                if(Math.abs(ax) < 0.2) ax = 0;
+                if(Math.abs(ay) < 0.2) ay = 0;
+
+                // Move Player (Com limitador de velocidade para não voar)
+                player.x += ax * 8;
+                player.y += ay * 8;
+
+                // Botão A (Index 0) para Dash
+                if(pad.buttons[0].pressed) { player.x += ax*5; player.y += ay*5; }
+            }
+
+            // Limites Tela
+            if(player.x<0) player.x=0; if(player.x>1240) player.x=1240;
+            if(player.y<0) player.y=0; if(player.y>680) player.y=680;
+
+            // Inimigo
+            let dx=player.x-enemy.x, dy=player.y-enemy.y, d=Math.hypot(dx,dy);
+            enemy.x += (dx/d)*enemy.spd; enemy.y += (dy/d)*enemy.spd; enemy.spd += 0.002;
+
+            // Render
+            ctx.clearRect(0,0,1280,720);
+            
+            // Grid Gramado
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth=2;
+            for(let i=0; i<1280; i+=60) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,720); ctx.stroke(); }
+            
+            ctx.fillStyle='#fff'; ctx.fillRect(player.x, player.y, 40, 40);
+            ctx.fillStyle='#e74c3c'; ctx.fillRect(enemy.x, enemy.y, 40, 40);
+
+            score++; document.getElementById('t').innerText = Math.floor(score/60);
+
+            if(d < 40) { active=false; document.getElementById('ui-layer').style.display='flex'; enemy.x=50; enemy.y=50; score=0; enemy.spd=3; }
+            
+            requestAnimationFrame(loop);
+        }
+
+        function checkStart() {
+            const pads = navigator.getGamepads();
+            if(pads[0] && pads[0].buttons[0].pressed) startGame();
+        }
+        
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
